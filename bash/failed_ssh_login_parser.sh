@@ -1,14 +1,22 @@
 #!/bin/bash
 
+# failed_ssh_login_parser.sh
+# Parses auth.log for failed SSH login attempts and generates
+# a ranked threat report with risk classification
+# Usage: ./failed_ssh_login_parser.sh [log_file_path]
+
 set -euo pipefail
 
 LOG_FILE="ssh_parser_$(date '+%Y-%m-%d_%H%M%S').log"
+
+# Strip ANSI color codes before writing to log file
 exec > >(tee >(sed 's/\x1b\[[0-9;]*m//g' >> "$LOG_FILE")) 2>&1
 
 FILE_PATH=${1:-/var/log/auth.log}
 HIGH_RISK_IPS=()
 
 parse_log () {
+    # NF-3 extracts the IP field from auth.log's "Failed password for user from IP port N ssh2" format
     grep "Failed password" "$FILE_PATH" | awk '{print $(NF-3)}' | sort | uniq -c | sort -rn
 }
 
@@ -68,6 +76,9 @@ log_message () {
 
 if [[ -f $FILE_PATH ]]; then
     log_message "Processing log file...\n"
+
+    # Use process substitution instead of pipe to keep generate_report
+    # in the parent shell so HIGH_RISK_IPS array modifications persist
     generate_report < <(parse_log)
     print_high_risk_ips
     log_message "Report saved to $LOG_FILE"
