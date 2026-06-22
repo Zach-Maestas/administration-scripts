@@ -1,9 +1,15 @@
 #!/bin/bash
 
+# dns-troubleshooter.sh
+# Checks DNS resolution, HTTP status, TLS certificate, and response
+# times for a domain and prints a color-coded health report
+# Usage: ./dns-troubleshooter.sh <domain>
+
 set -euo pipefail
 
 RED_BOLD=$'\033[1;31m'
 GREEN_BOLD=$'\033[1;32m'
+YELLOW_BOLD=$'\033[1;33m'
 NC=$'\033[0m'
 PASS="${GREEN_BOLD}✓${NC}"
 FAIL="${RED_BOLD}✗ FAILED${NC}"
@@ -13,15 +19,15 @@ check_dns_resolution () {
 }
 
 check_http_status () {
-    curl -s -o /dev/null -w "%{http_code}" "http://$1" # TODO: if it returns 000, make it return nothing
+    curl -s -o /dev/null -w "%{http_code}" "http://$1"
 }
 
 check_tls_status () {
-    openssl s_client -servername "$1" -connect "${1}:443" 2>/dev/null < /dev/null | openssl x509 -noout -enddate | cut -d= -f2
+    openssl s_client -servername "$1" -connect "${1}:443" 2>/dev/null < /dev/null | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2
 }
 
 check_tls_issuer () {
-    openssl s_client -connect "${1}:443" 2>/dev/null < /dev/null | openssl x509 -noout -issuer | sed -n 's/.*CN=\([^,]*\).*/\1/p'
+    openssl s_client -connect "${1}:443" 2>/dev/null < /dev/null | openssl x509 -noout -issuer 2>/dev/null | sed -n 's/.*CN=\([^,]*\).*/\1/p'
 }
 
 check_dns_lookup_time () {
@@ -33,6 +39,7 @@ check_http_response_time () {
 }
 
 validate_check () {
+    # curl returns "000" on connection failure rather than a real HTTP status code
     if ! result=$("$1" "$2") 2>/dev/null || [[ -z "$result" ]] || [[ "$result" == "000" ]]; then
         echo "$FAIL"
         return 1
@@ -53,10 +60,12 @@ generate_report () {
 
     if [[ $failed -eq 0 ]]; then
         status="${GREEN_BOLD}HEALTHY${NC}"
-    elif [[ $failed -eq 5 ]]; then
+    # DNS lookup time almost always returns a value unless DNS servers are unreachable,
+    # so 5+ of 6 failing indicates the domain is fully down rather than just degraded
+    elif [[ $failed -ge 5 ]]; then
         status="${RED_BOLD}UNHEALTHY${NC}"
     else
-        status="DEGRADED"
+        status="${YELLOW_BOLD}DEGRADED${NC}"
     fi
 
     printf "================================================\n"
@@ -71,12 +80,16 @@ generate_report () {
     printf "%-22s %s\n" "DNS Lookup Time (ms):" "$dns_lookup_time_result"
 
     printf "================================================\n"
-    printf "Status: ${RED_BOLD}${status}\n"
+    printf "Status: ${status}\n"
     printf "================================================\n\n"
 }
+
+if [[ $# -eq 0 ]]; then
+    printf "Usage: ./dns_http_troubleshooter.sh <domain>\n"
+    exit 1
+fi
 
 DOMAIN=$1
 
 printf "Checking $DOMAIN...\n\n"
-generate_report $DOMAIN
-
+generate_report "$DOMAIN"
