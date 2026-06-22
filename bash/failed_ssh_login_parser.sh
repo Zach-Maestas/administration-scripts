@@ -15,11 +15,11 @@ parse_log () {
 }
 
 generate_report () {
-    local RED='\033[0;31m'
-    local YELLOW='\033[0;33m'
-    local GREEN='\033[0;32m'
-    local NC='\033[0m'
-    local BOLD='\033[1m'
+    local RED=$'\033[0;31m'
+    local YELLOW=$'\033[0;33m'
+    local GREEN=$'\033[0;32m'
+    local NC=$'\033[0m'
+    local BOLD=$'\033[1m'
     local high_risk_ips=()
 
     printf "\n======================================\n"
@@ -28,23 +28,20 @@ generate_report () {
 
     local rank=1
     while IFS= read -r line; do
-        local count ip risk risk_color
+        local count ip risk
         count=$(echo "$line" | awk '{print $1}')
         ip=$(echo "$line" | awk '{print $2}')
 
-        risk="LOW"
-        risk_color=$GREEN
+        risk="${GREEN}LOW"
 
         if [[ $count -ge 20 ]]; then
-            risk="HIGH"
-            risk_color=$RED
+            risk="${RED}HIGH"
             high_risk_ips+=("$ip » $count attempts")
         elif [[ $count -ge 10 ]]; then
-            risk="MEDIUM"
-            risk_color=$YELLOW
+            risk="${YELLOW}MEDIUM"
         fi
 
-        printf "%-5s %-15s %-10s ${risk_color}%s${NC}\n" "$rank" "$ip" "$count" "$risk"
+        printf "%-5s %-15s %-10s %s${NC}\n" "$rank" "$ip" "$count" "$risk"
         ((rank++))
     done
     echo "======================================"
