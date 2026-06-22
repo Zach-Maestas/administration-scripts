@@ -54,3 +54,49 @@ Total unique IPs: 3
 **Requirements:**
 - Bash 4.0+
 - Sample log files available in `samples/`
+
+---
+
+### dns-troubleshooter.sh
+Checks DNS resolution, HTTP status, TLS certificate, and response times for a 
+domain and prints a color-coded health report.
+
+**Usage:**
+```bash
+./dns-troubleshooter.sh <domain>
+./dns-troubleshooter.sh example.com
+```
+
+**Sample Output:**
+```
+Checking example.com...
+
+================================================
+DNS/HTTP Health Report — example.com
+================================================
+DNS Resolution:        ✓ 93.184.216.34
+HTTP Status:           ✓ 200
+HTTPS/TLS:             ✓ Sep 12 12:00:00 2026 GMT
+TLS Issuer:            ✓ DigiCert Global G2 TLS RSA SHA256 2020 CA1
+HTTP Response Time:    ✓ 0.213s
+DNS Lookup Time (ms):  ✓ 13
+================================================
+Status: HEALTHY
+================================================
+```
+
+**Status Classifications:**
+- HEALTHY — all 6 checks pass
+- DEGRADED — 1–4 checks fail
+- UNHEALTHY — 5+ checks fail (domain likely fully down)
+
+**Concepts demonstrated:**
+- Function-based check pattern with a shared `validate_check` dispatcher
+- `dig`, `curl`, and `openssl` for DNS, HTTP, and TLS introspection
+- `set -euo pipefail` for safe script execution
+- ANSI color output for pass/fail/status indicators
+- `printf` column alignment for structured report formatting
+
+**Requirements:**
+- Bash 4.0+
+- `dig` (dnsutils), `curl`, `openssl`
