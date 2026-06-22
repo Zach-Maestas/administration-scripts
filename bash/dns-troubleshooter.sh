@@ -11,8 +11,6 @@ RED_BOLD=$'\033[1;31m'
 GREEN_BOLD=$'\033[1;32m'
 YELLOW_BOLD=$'\033[1;33m'
 NC=$'\033[0m'
-PASS="${GREEN_BOLD}✓${NC}"
-FAIL="${RED_BOLD}✗ FAILED${NC}"
 
 check_dns_resolution () {
     dig +short $1 | head -1
@@ -39,6 +37,8 @@ check_http_response_time () {
 }
 
 validate_check () {
+    local PASS="${GREEN_BOLD}✓${NC}"
+    local FAIL="${RED_BOLD}✗ FAILED${NC}"
     # curl returns "000" on connection failure rather than a real HTTP status code
     if ! result=$("$1" "$2") 2>/dev/null || [[ -z "$result" ]] || [[ "$result" == "000" ]]; then
         echo "$FAIL"
