@@ -45,8 +45,7 @@ Total unique IPs: 3
 
 **Concepts demonstrated:**
 - `set -euo pipefail` for safe script execution
-- Process substitution to preserve variable scope
-- Associative arrays for high risk IP tracking
+- Local arrays for scoped high risk IP tracking
 - ANSI color output with clean log file stripping via `tee` and `sed`
 - Timestamped dual output to stdout and log file
 - `grep`, `awk`, `sort`, `uniq` pipeline for log analysis
