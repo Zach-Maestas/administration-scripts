@@ -31,11 +31,14 @@ get_memory_usage () {
 }
 
 get_disk_usage () {
-    echo "Filesystem    Size    Used    Avail   Use%    Status"
-    df -h | awk 'NR >= 2 {print}' | while read line; do
-        local capacity
-        capacity=$(echo "$line" | awk '{gsub(/%/, "", $5); print $5}')
-        printf "%s %s\n" "$(echo "$line" | awk '{print $1, $2, $3, $4, $5}')" "$(get_status "$capacity")"
+    printf "  %-14s%-8s%-8s%-8s%-8s%s\n" "Filesystem" "Size" "Used" "Avail" "Use%" "Status"
+    printf "  %s\n" "-------------------------------------------------------"
+    df -h | awk 'NR >= 2 {print}' | while read -r line; do
+        local filesystem size used avail usepct capacity status
+        read -r filesystem size used avail usepct _ <<< "$line"
+        capacity="${usepct//%/}"
+        status=$(get_status "$capacity")
+        printf "  %-14s%-8s%-8s%-8s%-8s%s\n" "$filesystem" "$size" "$used" "$avail" "$usepct" "$status"
     done
 }
 
@@ -53,25 +56,52 @@ get_status () {
 }
 
 generate_report () {
-    local cpu_usage=$(get_cpu_usage)
-    local cpu_status=$(get_status "$cpu_usage")
+    local cpu_usage cpu_status
+    cpu_usage=$(get_cpu_usage)
+    cpu_status=$(get_status "$cpu_usage")
 
     local total_mem used_mem free_mem mem_usage mem_status
     read -r total_mem used_mem free_mem mem_usage <<< "$(get_memory_usage)"
-    mem_status=$(get_status $mem_usage)
+    mem_status=$(get_status "$mem_usage")
+
+    local disk_usage_output
+    disk_usage_output=$(get_disk_usage)
+
+    local overall_status=$NORMAL
+    if [[ "$cpu_status" == *"CRITICAL"* ]] || [[ "$mem_status" == *"CRITICAL"* ]] || echo "$disk_usage_output" | grep -q "CRITICAL"; then
+        overall_status=$CRITICAL
+    elif [[ "$cpu_status" == *"WARNING"* ]] || [[ "$mem_status" == *"WARNING"* ]] || echo "$disk_usage_output" | grep -q "WARNING"; then
+        overall_status=$WARNING
+    fi
+
+    echo "[$(date +"%Y-%m-%d %H:%M:%S")] Running system health check..."
+    echo ""
+    printf "================================================\n"
+    printf "System Health Report — %s\n" "$(hostname)"
+    printf "%s\n" "$(date +"%Y-%m-%d %H:%M:%S")"
+    printf "================================================\n"
+    echo ""
 
     printf "CPU Usage:\n"
-    printf "Usage: $cpu_usage\n"
-    printf "Status: $cpu_status\n"
+    printf "  %-16s%s\n" "Usage:" "${cpu_usage}%"
+    printf "  %-16s%s\n" "Status:" "$cpu_status"
+    echo ""
 
     printf "Memory Usage:\n"
-    printf "Total: $total_mem\n"
-    printf "Used: $used_mem\n"
-    printf "Free: $free_mem\n"
-    printf "Usage: $mem_usage\n"
-    printf "Status: $mem_status\n"
+    printf "  %-16s%s\n" "Total:" "${total_mem}GB"
+    printf "  %-16s%s\n" "Used:" "${used_mem}GB"
+    printf "  %-16s%s\n" "Free:" "${free_mem}GB"
+    printf "  %-16s%s\n" "Usage:" "${mem_usage}%"
+    printf "  %-16s%s\n" "Status:" "$mem_status"
+    echo ""
 
-    get_disk_usage
+    printf "Disk Usage:\n"
+    echo "$disk_usage_output"
+    echo ""
+
+    printf "================================================\n"
+    printf "Overall Status:  %s\n" "$overall_status"
+    printf "================================================\n"
 }
 
 generate_report
