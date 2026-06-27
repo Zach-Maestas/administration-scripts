@@ -33,7 +33,7 @@ get_memory_usage () {
 get_disk_usage () {
     printf "  %-14s%-8s%-8s%-8s%-8s%s\n" "Filesystem" "Size" "Used" "Avail" "Use%" "Status"
     printf "  %s\n" "-------------------------------------------------------"
-    df -h | awk 'NR >= 2 {print}' | while read -r line; do
+    df -h | awk -v exclude="tmpfs:devtmpfs:overlay:shm" 'NR >= 2 && !index(exclude, $1) {print}' | while read -r line; do
         local filesystem size used avail usepct capacity status
         read -r filesystem size used avail usepct _ <<< "$line"
         capacity="${usepct//%/}"
