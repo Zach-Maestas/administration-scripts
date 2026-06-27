@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# system-health-check.sh
+# Collects CPU, memory, and disk metrics and prints a color-coded
+# health report with NORMAL / WARNING / CRITICAL status thresholds
+# Usage: ./system-health-check.sh
+
 set -euo pipefail
 
 GREEN_BOLD=$'\033[1;32m'
@@ -14,12 +19,15 @@ CRITICAL="${RED_BOLD}✗ CRITICAL${NC}"
 MIB_TO_GIB=1024
 
 get_cpu_usage () {
+    # -bn1: batch mode, single iteration — avoids interactive output and CPU averaging across samples
+    # $8 is the idle% column; subtracting from 100 gives total usage
     top -bn1 | grep "Cpu(s)" | awk '{print 100 - int($8)}'
 }
 
 get_memory_usage () {
     local total_mem used_mem free_mem mem_usage total_mem_gib used_mem_gib free_mem_gib
 
+    # --mega reads in MiB (powers of 1024) not SI megabytes, keeping integer division exact for GiB conversion
     read -r total_mem used_mem free_mem <<< "$(free --mega | awk '/Mem:/{print $2, $3, $4}')"
     
     mem_usage=$(( $used_mem * 100 / $total_mem ))
@@ -33,6 +41,7 @@ get_memory_usage () {
 get_disk_usage () {
     printf "  %-14s%-8s%-8s%-8s%-8s%s\n" "Filesystem" "Size" "Used" "Avail" "Use%" "Status"
     printf "  %s\n" "-------------------------------------------------------"
+    # index() checks if $1 appears anywhere in the colon-separated exclude string, filtering virtual/overlay filesystems
     df -h | awk -v exclude="tmpfs:devtmpfs:overlay:shm" 'NR >= 2 && !index(exclude, $1) {print}' | while read -r line; do
         local filesystem size used avail usepct capacity status
         read -r filesystem size used avail usepct _ <<< "$line"
@@ -68,6 +77,7 @@ generate_report () {
     disk_usage_output=$(get_disk_usage)
 
     local overall_status=$NORMAL
+    # Matching against the raw ANSI string, so glob patterns are used instead of exact equality
     if [[ "$cpu_status" == *"CRITICAL"* ]] || [[ "$mem_status" == *"CRITICAL"* ]] || echo "$disk_usage_output" | grep -q "CRITICAL"; then
         overall_status=$CRITICAL
     elif [[ "$cpu_status" == *"WARNING"* ]] || [[ "$mem_status" == *"WARNING"* ]] || echo "$disk_usage_output" | grep -q "WARNING"; then
