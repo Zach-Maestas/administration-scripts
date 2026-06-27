@@ -18,16 +18,16 @@ get_cpu_usage () {
 }
 
 get_memory_usage () {
-    local total_mem used_mem free_mem mem_usage total_mem_gb used_mem_gb free_mem_gb
+    local total_mem used_mem free_mem mem_usage total_mem_gib used_mem_gib free_mem_gib
 
     read -r total_mem used_mem free_mem <<< "$(free --mega | awk '/Mem:/{print $2, $3, $4}')"
     
     mem_usage=$(( $used_mem * 100 / $total_mem ))
-    total_mem_gb=$(( total_mem / $MIB_TO_GIB ))
-    used_mem_gb=$(( used_mem / $MIB_TO_GIB ))
-    free_mem_gb=$(( free_mem / $MIB_TO_GIB ))
+    total_mem_gib=$(( total_mem / $MIB_TO_GIB ))
+    used_mem_gib=$(( used_mem / $MIB_TO_GIB ))
+    free_mem_gib=$(( $total_mem_gib - $used_mem_gib ))
 
-    echo "$total_mem_gb $used_mem_gb $free_mem_gb $mem_usage"
+    echo "$total_mem_gib $used_mem_gib $free_mem_gib $mem_usage"
 }
 
 get_disk_usage () {
@@ -88,9 +88,9 @@ generate_report () {
     echo ""
 
     printf "Memory Usage:\n"
-    printf "  %-16s%s\n" "Total:" "${total_mem}GB"
-    printf "  %-16s%s\n" "Used:" "${used_mem}GB"
-    printf "  %-16s%s\n" "Free:" "${free_mem}GB"
+    printf "  %-16s%s\n" "Total:" "${total_mem}GiB"
+    printf "  %-16s%s\n" "Used:" "${used_mem}GiB"
+    printf "  %-16s%s\n" "Free:" "${free_mem}GiB"
     printf "  %-16s%s\n" "Usage:" "${mem_usage}%"
     printf "  %-16s%s\n" "Status:" "$mem_status"
     echo ""
