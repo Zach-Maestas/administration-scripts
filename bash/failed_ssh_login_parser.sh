@@ -7,11 +7,9 @@
 
 set -euo pipefail
 
-FILE_PATH=${1:-/var/log/auth.log}
-
 parse_log () {
     # NF-3 extracts the IP field from auth.log's "Failed password for user from IP port N ssh2" format
-    grep "Failed password" "$FILE_PATH" | awk '{print $(NF-3)}' | sort | uniq -c | sort -rn
+    grep "Failed password" "$file_path" | awk '{print $(NF-3)}' | sort | uniq -c | sort -rn
 }
 
 generate_report () {
@@ -64,16 +62,17 @@ log_message () {
     printf "[$timestamp] $1"
 }
 
-if [[ ! -f $FILE_PATH ]]; then
+file_path=${1:-/var/log/auth.log}
+log_file="ssh_parser_$(date '+%Y-%m-%d_%H%M%S').log"
+
+if [[ ! -f $file_path ]]; then
     log_message "File not found\n"
     exit 2
 fi
 
-LOG_FILE="ssh_parser_$(date '+%Y-%m-%d_%H%M%S').log"
-
 # Strip ANSI color codes before writing to log file
-exec > >(tee >(sed 's/\x1b\[[0-9;]*m//g' >> "$LOG_FILE")) 2>&1
+exec > >(tee >(sed 's/\x1b\[[0-9;]*m//g' >> "$log_file")) 2>&1
 
 log_message "Processing log file...\n"
 parse_log | generate_report
-log_message "Report saved to $LOG_FILE\n"
+log_message "Report saved to $log_file\n"
