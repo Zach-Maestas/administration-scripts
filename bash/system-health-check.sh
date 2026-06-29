@@ -19,7 +19,7 @@ CRITICAL="${RED_BOLD}✗ CRITICAL${NC}"
 MIB_TO_GIB=1024
 
 get_cpu_usage () {
-    # -bn1: batch mode, single iteration — avoids interactive output and CPU averaging across samples
+    # -bn1: batch mode, single iteration; avoids interactive output and CPU averaging across samples
     # $8 is the idle% column; subtracting from 100 gives total usage
     top -bn1 | grep "Cpu(s)" | awk '{print 100 - int($8)}'
 }
